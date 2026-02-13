@@ -939,6 +939,27 @@ function emitAdminLog(message) {
 	}
 }
 
+function performHardReset(requestSocketId) {
+	clearPhaseTimer();
+
+	const requester = getPlayerBySocketId(requestSocketId);
+	const requesterLabel = requester
+		? `player ${requester.name} (#${requester.id})`
+		: `socket ${requestSocketId}`;
+
+	gameState = createInitialState();
+	nextPlayerId = 1;
+	adminSocketId = null;
+
+	io.sockets.sockets.forEach((s) => {
+		s.emit("hard-reset", {
+			message: `Game hard reset by ${requesterLabel}`,
+		});
+	});
+
+	emitState();
+}
+
 function startGameWithParticipants(
 	participants,
 	rolesConfig,
@@ -1082,6 +1103,10 @@ io.on("connection", (socket) => {
 			`Admin transferred to player ${targetPlayer.name} (#${targetPlayer.id})`,
 		);
 		emitState();
+	});
+
+	socket.on("hard-reset", () => {
+		performHardReset(socket.id);
 	});
 
 	socket.on("admin-start", (rolesConfig) => {

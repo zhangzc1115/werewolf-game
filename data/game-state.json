@@ -1,67 +1,43 @@
 {
-	"nextPlayerId": 3,
-	"gameState": {
-		"phase": "waiting",
-		"round": 0,
-		"gameMode": "admin_moderated",
-		"hostPlayerId": null,
-		"players": [
-			{
-				"id": 1,
-				"name": "david",
-				"role": "unassigned",
-				"alive": true,
-				"token": "1771016309495-3b47245e32f5e8",
-				"connected": false,
-				"canVote": true,
-				"isExposed": false,
-				"modelId": null,
-				"socketId": null
-			},
-			{
-				"id": 2,
-				"name": "david",
-				"role": "unassigned",
-				"alive": true,
-				"token": "1771020207887-07a889d2c3956",
-				"connected": true,
-				"canVote": true,
-				"isExposed": false,
-				"modelId": null,
-				"socketId": null
-			}
-		],
-		"actions": {
-			"hybridModels": {},
-			"wolfVotes": {},
-			"witch": {
-				"save": false,
-				"poisonTargetId": null
-			},
-			"seerChecks": {}
-		},
-		"nightResult": {
-			"deadIds": [],
-			"wolfTargetId": null,
-			"saved": false,
-			"poisonTargetId": null,
-			"causes": {}
-		},
-		"dayVote": {
-			"votedOutId": null,
-			"shotTargetId": null
-		},
-		"shootPhase": {
-			"shooterId": null,
-			"shooterRole": null,
-			"trigger": null,
-			"nextAfterShot": null
-		},
-		"witchAbilities": {
-			"saveUsed": false,
-			"poisonUsed": false
-		},
-		"publicNotice": "",
-		"winner": null
-	}
+  "nextPlayerId": 1,
+  "gameState": {
+    "phase": "waiting",
+    "round": 0,
+    "gameMode": "admin_moderated",
+    "hostPlayerId": null,
+    "players": [],
+    "actions": {
+      "hybridModels": {},
+      "wolfVotes": {},
+      "witch": {
+        "save": false,
+        "poisonTargetId": null
+      },
+      "seerChecks": {}
+    },
+    "nightResult": {
+      "deadIds": [],
+      "wolfTargetId": null,
+      "saved": false,
+      "poisonTargetId": null,
+      "causes": {}
+    },
+    "dayVote": {
+      "votedOutId": null,
+      "shotTargetId": null,
+      "votes": {}
+    },
+    "shootPhase": {
+      "shooterId": null,
+      "shooterRole": null,
+      "trigger": null,
+      "nextAfterShot": null
+    },
+    "witchAbilities": {
+      "saveUsed": false,
+      "poisonUsed": false
+    },
+    "publicNotice": "",
+    "winner": null
+  }
 }

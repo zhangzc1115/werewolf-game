@@ -438,6 +438,14 @@ function submitDayVote(targetId) {
 	socket.emit("action", { type: "day_vote", targetId });
 }
 
+function hardResetGame() {
+	const confirmed = window.confirm(
+		"Hard reset will clear the current game for everyone and remove saved local identity/admin state. Continue?",
+	);
+	if (!confirmed) return;
+	socket.emit("hard-reset");
+}
+
 socket.on("connect", () => {
 	const adminFlag = localStorage.getItem(STORAGE_ADMIN) === "1";
 
@@ -533,6 +541,20 @@ socket.on("admin-revoked", () => {
 	if (joined) showScreen("lobby");
 });
 
+socket.on("hard-reset", (payload) => {
+	isAdmin = false;
+	joined = false;
+	me = null;
+	lastPhase = "";
+	localStorage.removeItem(STORAGE_ADMIN);
+	localStorage.removeItem(STORAGE_NAME);
+	localStorage.removeItem(STORAGE_TOKEN);
+	showScreen("login");
+	if (payload?.message) {
+		alert(payload.message);
+	}
+});
+
 window.joinGame = joinGame;
 window.initAdmin = initAdmin;
 window.startGame = startGame;
@@ -542,3 +564,4 @@ window.dayVoteOut = dayVoteOut;
 window.submitDayVote = submitDayVote;
 window.releaseAdmin = releaseAdmin;
 window.transferAdmin = transferAdmin;
+window.hardResetGame = hardResetGame;

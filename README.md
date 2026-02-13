@@ -1,97 +1,49 @@
-# 🌕 狼人杀 Pro (Werewolf Pro) - 全自动语音法官
+# Werewolf LAN Game
 
-> 一个基于 Web 的狼人杀面杀辅助工具。
-> **零下载、跨平台、自带语音播报、防睁眼作弊。**
+A lightweight browser-based werewolf assistant for in-person games. One device acts as host/admin, and players join from phones.
 
-## ✨ 核心功能
+## Important Update
+Glitch project hosting was shut down on **July 8, 2025**, so the old Glitch deployment path no longer works.  
+Use local LAN mode or Ngrok instead.
 
-* **🔊 语音法官**：利用浏览器 TTS (Text-to-Speech) 自动播报“天黑请闭眼”、“狼人请睁眼”等指令，无需人类法官念词。
-* **📱 手机即手牌**：玩家通过手机浏览器查看身份、进行夜间行动（杀人、验人、毒/救）。
-* **🙈 防作弊机制**：
-    * **分阶段唤醒**：狼人行动时，平民手机强制黑屏。
-    * **私密操作**：只有当前角色的手机会显示操作按钮。
-* **☁️ 云端极速部署**：支持 Glitch/Render 一键部署，无需购买服务器。
+## Quick Start (Local LAN)
+Requirements: Node.js 18+ recommended.
 
----
+```bash
+npm install
+npm start
+```
 
-## 🚀 快速开始 (推荐：Glitch 部署)
+Server starts on `http://localhost:3000`.
 
-最简单的方式是部署在 Glitch 上，**免费且无需配置**。
+- Host/admin opens `http://localhost:3000` on laptop.
+- Players on same Wi-Fi open `http://<host-lan-ip>:3000`.
 
-1.  注册/登录 [Glitch.com](https://glitch.com)。
-2.  点击 **New Project** -> **glitch-hello-node**。
-3.  将本项目的文件内容复制到 Glitch 对应的文件中：
-    * `package.json`
-    * `server.js`
-    * `public/index.html`
-    * `public/client.js`
-    * `public/style.css`
-4.  等待 Glitch 自动安装依赖（约 30 秒）。
-5.  点击顶部的 **Share** -> 复制 **Live Site** 链接。
-6.  🎉 **完成！** 将链接发给朋友即可开始游戏。
+## Fastest Internet Sharing: Ngrok
+This is the best option for same-day party play without managing cloud servers.
 
----
+1. Start the app locally:
+   ```bash
+   npm start
+   ```
+2. Install/login to ngrok (once), then run:
+   ```bash
+   ngrok http 3000
+   ```
+3. Share the generated `https://...ngrok...` URL with players.
 
-## 🛠 本地运行 (局域网模式)
+Notes for free plan:
+- No tunnel timeout, but monthly usage caps apply.
+- Ngrok shows a browser warning/interstitial page for public HTML endpoints on free tier. Each player may need to click through once.
 
-如果你想用自己的电脑当服务器（需在同一 Wi-Fi 下）：
+## Alternative Hosting
+- Render: better for always-on use and easier sharing over time.
+- Replit: quick cloud setup, but check sleep/idle behavior on your plan.
 
-### 前置要求
-* 安装 [Node.js](https://nodejs.org/) (v14 以上)
+## Admin Flow
+1. Open page and click the admin/host button.
+2. Wait for players to join lobby.
+3. Start game, then advance phases from admin controls.
 
-### 安装步骤
-
-1.  克隆或下载本项目代码。
-2.  在终端进入项目目录，安装依赖：
-    ```bash
-    npm install
-    ```
-3.  启动服务器：
-    ```bash
-    node server.js
-    ```
-4.  **访问地址**：
-    * **上帝端（电脑）**：浏览器访问 `http://localhost:3000`
-    * **玩家端（手机）**：查找电脑的局域网 IP（如 `192.168.1.5`），手机浏览器访问 `http://192.168.1.5:3000`
-
----
-
-## 📖 上帝（房主）操作手册
-
-**建议配置：** 一台笔记本电脑 + 蓝牙音箱（用于播放法官声音）。
-
-1.  **进入控制台**：
-    * 打开游戏链接，点击首页底部的 **“我是上帝(房主)”** 按钮。
-    * *注意：首次进入请点击页面任意位置，以授权浏览器播放声音。*
-
-2.  **等待玩家加入**：
-    * 让朋友们扫描二维码或输入网址。
-    * 输入昵称后点击“加入游戏”。
-    * 上帝端的大厅列表会实时更新。
-
-3.  **游戏流程控制**：
-    * **Step 1: 发牌并入夜**
-        * 点击按钮，系统会自动分配身份（默认配置：2狼、1女巫、1预言家、其余平民）。
-        * 音箱播报：“天黑请闭眼...”。
-    * **Step 2: 唤醒角色**
-        * 依次点击 **“唤醒狼人”** -> **“唤醒女巫”** -> **“唤醒预言家”**。
-        * 系统会自动播报对应的语音，并解锁对应身份玩家的手机屏幕。
-    * **Step 3: 天亮结算**
-        * 点击 **“天亮结算”**。
-        * 系统播报：“天亮了...”，并自动计算昨晚死亡名单，推送到所有人的手机上。
-
----
-
-## ⚙️ 自定义配置 (修改代码)
-
-如果你想修改游戏人数或角色配置，请编辑 `server.js` 文件中的 `admin-start` 部分：
-
-```javascript
-// server.js 第 40 行左右
-socket.on("admin-start", (config) => {
-    //在这里修改默认配置
-    let roles = [];
-    // 例如：修改狼人数量为 3
-    for (let i = 0; i < 3; i++) roles.push("wolf"); 
-    // ...
-});
+## Customization
+Adjust role setup and phase logic in `server.js` (socket handlers such as `admin-start` and phase transitions).

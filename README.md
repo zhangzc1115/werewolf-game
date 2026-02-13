@@ -45,5 +45,32 @@ Notes for free plan:
 2. Wait for players to join lobby.
 3. Start game, then advance phases from admin controls.
 
+## Current Ruleset
+The implemented gameplay logic (roles, phase order, shoot rules, win conditions, reconnect/persistence behavior) is documented in:
+
+- `GAMEPLAY_BEHAVIOR.md`
+
+## Testing
+The repo now includes integration tests under `tests/game.test.js` using Node's built-in test runner and `socket.io-client`.
+
+```bash
+npm install
+npm test
+```
+
+Windows PowerShell (if script policy blocks `npm`):
+
+```powershell
+npm.cmd install
+npm.cmd test
+```
+
+These tests cover high-risk gameplay paths including:
+- Hybrid night-1 model selection and seer interaction.
+- Idiot vote immunity/exposure flow.
+- Wolf King day-vote shoot behavior and poison edge case.
+- Hunter shoot behavior and poison restriction.
+- Hybrid-aware victory counting.
+
 ## Customization
 Adjust role setup and phase logic in `server.js` (socket handlers such as `admin-start` and phase transitions).

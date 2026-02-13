@@ -28,7 +28,7 @@
             <div id="status-bar">
                 <span id="my-role-display"></span>
             </div>
-            
+
             <div id="mask" class="active">
                 <div class="moon">🌑</div>
                 <h3>请闭眼</h3>
@@ -39,7 +39,7 @@
                 <div id="targets" class="grid"></div>
                 <div id="extra-actions"></div>
             </div>
-            
+
             <div id="day-layer" class="hidden">
                 <h1>🌞 天亮了</h1>
                 <p id="day-result"></p>
@@ -51,10 +51,12 @@
             <p style="font-size:12px; color:#aaa;">请连接蓝牙音箱，保持此页面常亮</p>
             <div class="control-panel">
                 <button onclick="startGame()">1. 发牌并入夜</button>
-                <button onclick="nextPhase('wolf')">2. 唤醒狼人</button>
-                <button onclick="nextPhase('witch')">3. 唤醒女巫</button>
-                <button onclick="nextPhase('seer')">4. 唤醒预言家</button>
-                <button onclick="nextPhase('day_announce')" class="btn-day">5. 天亮结算</button>
+                <button onclick="nextPhase('hybrid')">2. 混血儿认榜样(仅第一夜)</button>
+                <button onclick="nextPhase('wolf')">3. 唤醒狼人/狼枪</button>
+                <button onclick="nextPhase('witch')">4. 唤醒女巫</button>
+                <button onclick="nextPhase('seer')">5. 唤醒预言家</button>
+                <button onclick="nextPhase('day_announce')" class="btn-day">6. 天亮结算</button>
+                <button onclick="dayVoteOut()" class="btn-day">7. 白天投票出局</button>
             </div>
             <div id="admin-log"></div>
         </div>

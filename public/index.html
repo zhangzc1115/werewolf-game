@@ -22,15 +22,17 @@
             <h2>等待玩家...</h2>
             <div id="player-list"></div>
             <div id="waiting-msg">请等待上帝开始游戏</div>
-            <div>
+            <div class="role-settings">
                 <h3>自主持配置</h3>
-                <label>狼人 <input id="lobby-role-wolf" type="number" min="0" value="1"></label>
-                <label>狼枪 <input id="lobby-role-wolfKing" type="number" min="0" value="1"></label>
-                <label>女巫 <input id="lobby-role-witch" type="number" min="0" value="1"></label>
-                <label>预言家 <input id="lobby-role-seer" type="number" min="0" value="1"></label>
-                <label>猎人 <input id="lobby-role-hunter" type="number" min="0" value="1"></label>
-                <label>白痴 <input id="lobby-role-idiot" type="number" min="0" value="1"></label>
-                <label>混血儿 <input id="lobby-role-hybrid" type="number" min="0" value="1"></label>
+                <div class="role-grid">
+                    <div class="role-item"><span>狼人</span><input id="lobby-role-wolf" type="number" min="0" value="1"></div>
+                    <div class="role-item"><span>狼枪</span><input id="lobby-role-wolfKing" type="number" min="0" value="1"></div>
+                    <div class="role-item"><span>女巫</span><input id="lobby-role-witch" type="number" min="0" value="1"></div>
+                    <div class="role-item"><span>预言家</span><input id="lobby-role-seer" type="number" min="0" value="1"></div>
+                    <div class="role-item"><span>猎人</span><input id="lobby-role-hunter" type="number" min="0" value="1"></div>
+                    <div class="role-item"><span>白痴</span><input id="lobby-role-idiot" type="number" min="0" value="1"></div>
+                    <div class="role-item"><span>混血儿</span><input id="lobby-role-hybrid" type="number" min="0" value="1"></div>
+                </div>
             </div>
             <button onclick="startSelfModeratedGame()">玩家自主持开始</button>
             <button onclick="initAdmin()">切换为上帝主持</button>
@@ -62,15 +64,17 @@
         <div id="admin" class="screen hidden">
             <h2>上帝控制台</h2>
             <p style="font-size:12px; color:#aaa;">保持此页面常亮用于主持</p>
-            <div>
+            <div class="role-settings">
                 <h3>开局配置</h3>
-                <label>狼人 <input id="admin-role-wolf" type="number" min="0" value="1"></label>
-                <label>狼枪 <input id="admin-role-wolfKing" type="number" min="0" value="1"></label>
-                <label>女巫 <input id="admin-role-witch" type="number" min="0" value="1"></label>
-                <label>预言家 <input id="admin-role-seer" type="number" min="0" value="1"></label>
-                <label>猎人 <input id="admin-role-hunter" type="number" min="0" value="1"></label>
-                <label>白痴 <input id="admin-role-idiot" type="number" min="0" value="1"></label>
-                <label>混血儿 <input id="admin-role-hybrid" type="number" min="0" value="1"></label>
+                <div class="role-grid">
+                    <div class="role-item"><span>狼人</span><input id="admin-role-wolf" type="number" min="0" value="1"></div>
+                    <div class="role-item"><span>狼枪</span><input id="admin-role-wolfKing" type="number" min="0" value="1"></div>
+                    <div class="role-item"><span>女巫</span><input id="admin-role-witch" type="number" min="0" value="1"></div>
+                    <div class="role-item"><span>预言家</span><input id="admin-role-seer" type="number" min="0" value="1"></div>
+                    <div class="role-item"><span>猎人</span><input id="admin-role-hunter" type="number" min="0" value="1"></div>
+                    <div class="role-item"><span>白痴</span><input id="admin-role-idiot" type="number" min="0" value="1"></div>
+                    <div class="role-item"><span>混血儿</span><input id="admin-role-hybrid" type="number" min="0" value="1"></div>
+                </div>
             </div>
             <div class="control-panel">
                 <button onclick="startGame()">1. 发牌并入夜</button>
@@ -80,7 +84,10 @@
                 <button onclick="nextPhase('seer')">5. 唤醒预言家</button>
                 <button onclick="nextPhase('day_announce')" class="btn-day">6. 天亮结算</button>
                 <button onclick="dayVoteOut()" class="btn-day">7. 白天投票出局</button>
-                <label>移交给玩家ID <input id="transfer-player-id" type="number" min="1"></label>
+                <div class="role-item" style="max-width: 200px; margin: 10px auto;">
+                    <span>移交给玩家ID</span>
+                    <input id="transfer-player-id" type="number" min="1">
+                </div>
                 <button onclick="transferAdmin()">移交上帝</button>
                 <button onclick="releaseAdmin()">退出上帝模式</button>
             </div>

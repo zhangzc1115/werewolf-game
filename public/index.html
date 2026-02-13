@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
@@ -11,7 +11,7 @@
 <body>
     <div id="app">
         <div id="login" class="screen">
-            <h1>🌕 狼人杀 Pro</h1>
+            <h1>狼人杀 Pro</h1>
             <input type="text" id="username" placeholder="输入名字">
             <button onclick="joinGame()">加入游戏</button>
             <div class="divider">或者</div>
@@ -22,6 +22,18 @@
             <h2>等待玩家...</h2>
             <div id="player-list"></div>
             <div id="waiting-msg">请等待上帝开始游戏</div>
+            <div>
+                <h3>自主持配置</h3>
+                <label>狼人 <input id="lobby-role-wolf" type="number" min="0" value="1"></label>
+                <label>狼枪 <input id="lobby-role-wolfKing" type="number" min="0" value="1"></label>
+                <label>女巫 <input id="lobby-role-witch" type="number" min="0" value="1"></label>
+                <label>预言家 <input id="lobby-role-seer" type="number" min="0" value="1"></label>
+                <label>猎人 <input id="lobby-role-hunter" type="number" min="0" value="1"></label>
+                <label>白痴 <input id="lobby-role-idiot" type="number" min="0" value="1"></label>
+                <label>混血儿 <input id="lobby-role-hybrid" type="number" min="0" value="1"></label>
+            </div>
+            <button onclick="startSelfModeratedGame()">玩家自主持开始</button>
+            <button onclick="initAdmin()">切换为上帝主持</button>
         </div>
 
         <div id="game" class="screen hidden">
@@ -30,7 +42,7 @@
             </div>
 
             <div id="mask" class="active">
-                <div class="moon">🌑</div>
+                <div class="moon">🌙</div>
                 <h3>请闭眼</h3>
             </div>
 
@@ -41,14 +53,25 @@
             </div>
 
             <div id="day-layer" class="hidden">
-                <h1>🌞 天亮了</h1>
+                <h1>天亮了</h1>
                 <p id="day-result"></p>
+                <div id="day-vote-panel"></div>
             </div>
         </div>
 
         <div id="admin" class="screen hidden">
-            <h2>🎙️ 上帝控制台</h2>
-            <p style="font-size:12px; color:#aaa;">请连接蓝牙音箱，保持此页面常亮</p>
+            <h2>上帝控制台</h2>
+            <p style="font-size:12px; color:#aaa;">保持此页面常亮用于主持</p>
+            <div>
+                <h3>开局配置</h3>
+                <label>狼人 <input id="admin-role-wolf" type="number" min="0" value="1"></label>
+                <label>狼枪 <input id="admin-role-wolfKing" type="number" min="0" value="1"></label>
+                <label>女巫 <input id="admin-role-witch" type="number" min="0" value="1"></label>
+                <label>预言家 <input id="admin-role-seer" type="number" min="0" value="1"></label>
+                <label>猎人 <input id="admin-role-hunter" type="number" min="0" value="1"></label>
+                <label>白痴 <input id="admin-role-idiot" type="number" min="0" value="1"></label>
+                <label>混血儿 <input id="admin-role-hybrid" type="number" min="0" value="1"></label>
+            </div>
             <div class="control-panel">
                 <button onclick="startGame()">1. 发牌并入夜</button>
                 <button onclick="nextPhase('hybrid')">2. 混血儿认榜样(仅第一夜)</button>
@@ -57,6 +80,9 @@
                 <button onclick="nextPhase('seer')">5. 唤醒预言家</button>
                 <button onclick="nextPhase('day_announce')" class="btn-day">6. 天亮结算</button>
                 <button onclick="dayVoteOut()" class="btn-day">7. 白天投票出局</button>
+                <label>移交给玩家ID <input id="transfer-player-id" type="number" min="1"></label>
+                <button onclick="transferAdmin()">移交上帝</button>
+                <button onclick="releaseAdmin()">退出上帝模式</button>
             </div>
             <div id="admin-log"></div>
         </div>

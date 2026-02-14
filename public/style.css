@@ -124,3 +124,27 @@ input[type="number"] {
 	border-radius: 6px;
 	border: 1px solid #d32f2f;
 }
+
+.save-panel {
+	margin-top: 12px;
+	padding: 10px;
+	background: #202020;
+	border: 1px solid #3a3a3a;
+	border-radius: 8px;
+}
+
+.save-row {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.save-row:last-child {
+	margin-bottom: 0;
+}
+
+.save-row input,
+.save-row select {
+	flex: 1;
+	width: auto;
+}

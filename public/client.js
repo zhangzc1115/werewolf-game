@@ -4,6 +4,8 @@ let me = null;
 let isAdmin = false;
 let joined = false;
 let lastPhase = "";
+let saveSlots = [];
+let saveListRequested = false;
 
 const STORAGE_TOKEN = "ww_player_token";
 const STORAGE_NAME = "ww_player_name";
@@ -48,6 +50,79 @@ function appendAdminLog(message) {
 	const row = document.createElement("div");
 	row.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
 	log.prepend(row);
+}
+
+function renderSaveSlots() {
+	const select = document.getElementById("save-slot-select");
+	if (!select) return;
+
+	if (!saveSlots.length) {
+		select.innerHTML = '<option value="">No saved games</option>';
+		return;
+	}
+
+	select.innerHTML = saveSlots
+		.map((slot) => {
+			const summary = slot.summary || {};
+			const elapsed = formatDuration(summary.elapsedMs || 0);
+			const who = slot.savedBy || "Unknown";
+			const notes = slot.notes ? ` | notes: ${slot.notes}` : "";
+			const text = `${slot.label} | by ${who} | R${summary.round || 0} | ${summary.phase || "waiting"} | ${summary.alivePlayers || 0}/${summary.totalPlayers || 0} alive | t=${elapsed}${notes} | ${slot.savedAt || ""}`;
+			return `<option value="${escapeHtml(slot.id)}">${escapeHtml(text)}</option>`;
+		})
+		.join("");
+}
+
+function formatDuration(ms) {
+	const totalSec = Math.max(0, Math.floor(Number(ms || 0) / 1000));
+	const m = Math.floor(totalSec / 60);
+	const s = totalSec % 60;
+	return `${m}m${String(s).padStart(2, "0")}s`;
+}
+
+function refreshSaveList() {
+	socket.emit("list-saves");
+}
+
+function saveCurrentGameSnapshot() {
+	const labelInput = document.getElementById("save-label");
+	const notesInput = document.getElementById("save-notes");
+	const label = (labelInput?.value || "").trim();
+	const notes = (notesInput?.value || "").trim();
+	socket.emit("save-game", { label, notes });
+	if (labelInput) labelInput.value = "";
+	if (notesInput) notesInput.value = "";
+}
+
+function selectedSaveId() {
+	const select = document.getElementById("save-slot-select");
+	return String(select?.value || "").trim();
+}
+
+function loadSavedGameSnapshot() {
+	const saveId = selectedSaveId();
+	if (!saveId) {
+		alert("Please select a saved game first.");
+		return;
+	}
+	const confirmed = window.confirm(
+		"Load this saved game? Current progress will be overwritten.",
+	);
+	if (!confirmed) return;
+	socket.emit("load-game", { saveId });
+}
+
+function deleteSavedGameSnapshot() {
+	const saveId = selectedSaveId();
+	if (!saveId) {
+		alert("Please select a saved game first.");
+		return;
+	}
+	const confirmed = window.confirm(
+		"Delete this saved game snapshot? This cannot be undone.",
+	);
+	if (!confirmed) return;
+	socket.emit("delete-save", { saveId });
 }
 
 function roleName(role) {
@@ -391,6 +466,7 @@ function joinGame() {
 function initAdmin() {
 	isAdmin = true;
 	joined = true;
+	saveListRequested = false;
 	localStorage.setItem(STORAGE_ADMIN, "1");
 	socket.emit("admin-claim");
 	showScreen("admin");
@@ -452,6 +528,7 @@ socket.on("connect", () => {
 	if (adminFlag) {
 		isAdmin = true;
 		joined = true;
+		saveListRequested = false;
 		socket.emit("admin-claim");
 		showScreen("admin");
 		return;
@@ -489,6 +566,10 @@ socket.on("update", (state) => {
 
 	if (isAdmin) {
 		showScreen("admin");
+		if (!saveListRequested) {
+			socket.emit("list-saves");
+			saveListRequested = true;
+		}
 		if (lastPhase !== state.phase) {
 			announcePhase(state.phase);
 			lastPhase = state.phase;
@@ -531,14 +612,25 @@ socket.on("transfer-error", (payload) => {
 socket.on("admin-granted", () => {
 	isAdmin = true;
 	joined = true;
+	saveListRequested = false;
 	localStorage.setItem(STORAGE_ADMIN, "1");
 	showScreen("admin");
+	socket.emit("list-saves");
+	saveListRequested = true;
 });
 
 socket.on("admin-revoked", () => {
 	isAdmin = false;
+	saveListRequested = false;
+	saveSlots = [];
+	renderSaveSlots();
 	localStorage.setItem(STORAGE_ADMIN, "0");
 	if (joined) showScreen("lobby");
+});
+
+socket.on("save-list", (list) => {
+	saveSlots = Array.isArray(list) ? list : [];
+	renderSaveSlots();
 });
 
 socket.on("hard-reset", (payload) => {
@@ -546,6 +638,9 @@ socket.on("hard-reset", (payload) => {
 	joined = false;
 	me = null;
 	lastPhase = "";
+	saveListRequested = false;
+	saveSlots = [];
+	renderSaveSlots();
 	localStorage.removeItem(STORAGE_ADMIN);
 	localStorage.removeItem(STORAGE_NAME);
 	localStorage.removeItem(STORAGE_TOKEN);
@@ -565,3 +660,7 @@ window.submitDayVote = submitDayVote;
 window.releaseAdmin = releaseAdmin;
 window.transferAdmin = transferAdmin;
 window.hardResetGame = hardResetGame;
+window.refreshSaveList = refreshSaveList;
+window.saveCurrentGameSnapshot = saveCurrentGameSnapshot;
+window.loadSavedGameSnapshot = loadSavedGameSnapshot;
+window.deleteSavedGameSnapshot = deleteSavedGameSnapshot;

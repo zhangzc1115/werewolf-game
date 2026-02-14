@@ -7,3 +7,5 @@ pnpm-debug.log*
 .env.*
 .DS_Store
 Thumbs.db
+data/game-state.json
+data/saved-games.json

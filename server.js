@@ -13,7 +13,10 @@ app.use(express.static(path.join(__dirname, "public")));
 const DATA_DIR = process.env.WW_DATA_DIR || path.join(__dirname, "data");
 const STATE_FILE =
 	process.env.WW_STATE_FILE || path.join(DATA_DIR, "game-state.json");
+const SAVED_GAMES_FILE =
+	process.env.WW_SAVED_GAMES_FILE || path.join(DATA_DIR, "saved-games.json");
 const DISABLE_PERSIST = process.env.WW_DISABLE_PERSIST === "1";
+const MAX_SAVED_GAMES = 10;
 
 const PHASES = {
 	WAITING: "waiting",
@@ -44,6 +47,7 @@ function createInitialState() {
 	return {
 		phase: PHASES.WAITING,
 		round: 0,
+		gameStartedAt: null,
 		gameMode: "admin_moderated",
 		hostPlayerId: null,
 		players: [],
@@ -200,37 +204,155 @@ function ensureDataDir() {
 	}
 }
 
+function serializePlayersForDisk(players) {
+	return players.map((p) => ({
+		id: p.id,
+		name: p.name,
+		role: p.role,
+		alive: Boolean(p.alive),
+		token: p.token || generateToken(),
+		connected: Boolean(p.connected),
+		canVote: Boolean(p.canVote),
+		isExposed: Boolean(p.isExposed),
+		modelId: p.modelId ? Number(p.modelId) : null,
+		socketId: null,
+	}));
+}
+
+function serializeCurrentSnapshot() {
+	return {
+		nextPlayerId,
+		gameState: {
+			...gameState,
+			players: serializePlayersForDisk(gameState.players),
+		},
+	};
+}
+
+function applySnapshot(snapshot, options = {}) {
+	const loaded = snapshot?.gameState || {};
+	const loadedPlayers = Array.isArray(loaded.players) ? loaded.players : [];
+	const preserveConnectedByToken = options.preserveConnectedByToken || new Map();
+
+	gameState = {
+		...createInitialState(),
+		...loaded,
+		players: loadedPlayers.map((p) => {
+			const playerToken = String(p.token || generateToken());
+			const connectedSession = preserveConnectedByToken.get(playerToken);
+			const liveSocket =
+				connectedSession && io.sockets.sockets.get(connectedSession.socketId);
+
+			return {
+				id: Number(p.id),
+				name:
+					String(p.name || `Player ${p.id || ""}`).trim() ||
+					`Player ${p.id || ""}`,
+				role: String(p.role || "unassigned"),
+				alive: Boolean(p.alive),
+				token: playerToken,
+				connected: Boolean(liveSocket),
+				socketId: liveSocket ? connectedSession.socketId : null,
+				canVote: p.canVote === undefined ? true : Boolean(p.canVote),
+				isExposed: Boolean(p.isExposed),
+				modelId: p.modelId ? Number(p.modelId) : null,
+			};
+		}),
+	};
+
+	if (!Object.values(PHASES).includes(gameState.phase)) {
+		gameState.phase = PHASES.WAITING;
+	}
+
+	if (!gameState.winner || !gameState.winner.team) {
+		gameState.winner = null;
+	}
+	gameState.gameStartedAt = Number(gameState.gameStartedAt) || null;
+
+	nextPlayerId = Number(snapshot?.nextPlayerId) || 1;
+	if (gameState.players.length) {
+		const maxPlayerId = Math.max(...gameState.players.map((p) => p.id));
+		nextPlayerId = Math.max(nextPlayerId, maxPlayerId + 1);
+	}
+}
+
+function buildConnectedTokenMap() {
+	const map = new Map();
+	gameState.players.forEach((p) => {
+		if (!p.connected || !p.socketId || !p.token) return;
+		if (!io.sockets.sockets.get(p.socketId)) return;
+		map.set(String(p.token), { socketId: p.socketId });
+	});
+	return map;
+}
+
+function readSavedGames() {
+	if (DISABLE_PERSIST) return [];
+	try {
+		if (!fs.existsSync(SAVED_GAMES_FILE)) return [];
+		const raw = JSON.parse(fs.readFileSync(SAVED_GAMES_FILE, "utf8"));
+		return Array.isArray(raw?.saves) ? raw.saves : [];
+	} catch (err) {
+		console.error("Failed to read saved games:", err.message);
+		return [];
+	}
+}
+
+function writeSavedGames(saves) {
+	if (DISABLE_PERSIST) return;
+	try {
+		ensureDataDir();
+		const trimmed = (Array.isArray(saves) ? saves : []).slice(0, MAX_SAVED_GAMES);
+		fs.writeFileSync(
+			SAVED_GAMES_FILE,
+			JSON.stringify({ saves: trimmed }, null, 2),
+			"utf8",
+		);
+	} catch (err) {
+		console.error("Failed to write saved games:", err.message);
+	}
+}
+
+function buildSaveSummary(snapshot) {
+	const state = snapshot?.gameState || {};
+	const players = Array.isArray(state.players) ? state.players : [];
+	const alivePlayers = players.filter((p) => p.alive).length;
+	const startedAt = Number(state.gameStartedAt) || null;
+	const elapsedMs = startedAt ? Math.max(0, Date.now() - startedAt) : 0;
+	return {
+		phase: state.phase || PHASES.WAITING,
+		round: Number(state.round) || 0,
+		gameMode: state.gameMode || "admin_moderated",
+		totalPlayers: players.length,
+		alivePlayers,
+		elapsedMs,
+	};
+}
+
+function listSavedGameMeta() {
+	return readSavedGames().map((entry) => ({
+		id: entry.id,
+		label: entry.label,
+		notes: entry.notes || "",
+		savedBy: entry.savedBy || "Unknown",
+		savedAt: entry.savedAt,
+		summary: entry.summary,
+	}));
+}
+
+function emitSaveListTo(socket) {
+	socket.emit("save-list", listSavedGameMeta());
+}
+
 function saveStateToDisk() {
 	if (DISABLE_PERSIST) return;
 	try {
 		ensureDataDir();
-		const serializablePlayers = gameState.players.map((p) => ({
-			id: p.id,
-			name: p.name,
-			role: p.role,
-			alive: Boolean(p.alive),
-			token: p.token || generateToken(),
-			connected: Boolean(p.connected),
-			canVote: Boolean(p.canVote),
-			isExposed: Boolean(p.isExposed),
-			modelId: p.modelId ? Number(p.modelId) : null,
-			socketId: null,
-		}));
-
-		const payload = {
-			nextPlayerId,
-			gameState: {
-				...gameState,
-				players: serializablePlayers,
-			},
-		};
+		const payload = serializeCurrentSnapshot();
 
 		fs.writeFileSync(STATE_FILE, JSON.stringify(payload, null, 2), "utf8");
 	} catch (err) {
-		console.error(
-			"Failed to load persisted state, using initial state.",
-			err.message,
-		);
+		console.error("Failed to save persisted state:", err.message);
 	}
 }
 
@@ -240,41 +362,7 @@ function loadStateFromDisk() {
 		if (!fs.existsSync(STATE_FILE)) return;
 
 		const raw = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
-		const loaded = raw.gameState || {};
-		const loadedPlayers = Array.isArray(loaded.players) ? loaded.players : [];
-
-		gameState = {
-			...createInitialState(),
-			...loaded,
-			players: loadedPlayers.map((p) => ({
-				id: Number(p.id),
-				name:
-					String(p.name || `閻溾晛顔?{p.id || ''}`).trim() ||
-					`閻溾晛顔?{p.id || ''}`,
-				role: String(p.role || "unassigned"),
-				alive: Boolean(p.alive),
-				token: String(p.token || generateToken()),
-				connected: false,
-				socketId: null,
-				canVote: p.canVote === undefined ? true : Boolean(p.canVote),
-				isExposed: Boolean(p.isExposed),
-				modelId: p.modelId ? Number(p.modelId) : null,
-			})),
-		};
-
-		if (!Object.values(PHASES).includes(gameState.phase)) {
-			gameState.phase = PHASES.WAITING;
-		}
-
-		if (!gameState.winner || !gameState.winner.team) {
-			gameState.winner = null;
-		}
-
-		nextPlayerId = Number(raw.nextPlayerId) || 1;
-		if (gameState.players.length) {
-			const maxPlayerId = Math.max(...gameState.players.map((p) => p.id));
-			nextPlayerId = Math.max(nextPlayerId, maxPlayerId + 1);
-		}
+		applySnapshot(raw);
 
 		adminSocketId = null;
 	} catch (err) {
@@ -939,6 +1027,62 @@ function emitAdminLog(message) {
 	}
 }
 
+function createSaveLabel(rawLabel) {
+	const input = String(rawLabel || "").trim();
+	if (input) return input.slice(0, 60);
+	const stamp = new Date().toISOString().replace("T", " ").slice(0, 19);
+	return `Save ${stamp}`;
+}
+
+function createSaveNotes(rawNotes) {
+	const input = String(rawNotes || "").trim();
+	return input.slice(0, 240);
+}
+
+function resolveSaverLabel(socketId) {
+	const player = getPlayerBySocketId(socketId);
+	if (player) return `${player.name} (#${player.id})`;
+	if (socketId === adminSocketId) return "Admin Console";
+	return `Socket ${socketId}`;
+}
+
+function saveCurrentGameSnapshot(rawLabel, rawNotes, savedBy) {
+	const snapshot = serializeCurrentSnapshot();
+	const now = new Date().toISOString();
+	const entry = {
+		id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+		label: createSaveLabel(rawLabel),
+		notes: createSaveNotes(rawNotes),
+		savedBy: String(savedBy || "Unknown"),
+		savedAt: now,
+		summary: buildSaveSummary(snapshot),
+		snapshot,
+	};
+
+	const saves = readSavedGames();
+	saves.unshift(entry);
+	writeSavedGames(saves);
+	return entry;
+}
+
+function loadGameSnapshotById(saveId) {
+	const saves = readSavedGames();
+	const entry = saves.find((s) => s.id === saveId);
+	if (!entry || !entry.snapshot) return null;
+
+	const connectedByToken = buildConnectedTokenMap();
+	applySnapshot(entry.snapshot, { preserveConnectedByToken: connectedByToken });
+	return entry;
+}
+
+function deleteGameSnapshotById(saveId) {
+	const saves = readSavedGames();
+	const filtered = saves.filter((s) => s.id !== saveId);
+	if (filtered.length === saves.length) return false;
+	writeSavedGames(filtered);
+	return true;
+}
+
 function performHardReset(requestSocketId) {
 	clearPhaseTimer();
 
@@ -984,6 +1128,7 @@ function startGameWithParticipants(
 	});
 
 	gameState.round = 1;
+	gameState.gameStartedAt = Date.now();
 	gameState.winner = null;
 	gameState.gameMode = mode;
 	gameState.hostPlayerId = mode === "self_moderated" ? hostPlayerId : null;
@@ -1059,6 +1204,7 @@ io.on("connection", (socket) => {
 		}
 		adminSocketId = socket.id;
 		emitAdminLog("Admin control claimed");
+		emitSaveListTo(socket);
 		emitState();
 	});
 
@@ -1107,6 +1253,55 @@ io.on("connection", (socket) => {
 
 	socket.on("hard-reset", () => {
 		performHardReset(socket.id);
+	});
+
+	socket.on("list-saves", () => {
+		if (!isAdminSocket(socket)) return;
+		emitSaveListTo(socket);
+	});
+
+	socket.on("save-game", (payload) => {
+		if (!isAdminSocket(socket)) return;
+		const label = typeof payload?.label === "string" ? payload.label : "";
+		const notes = typeof payload?.notes === "string" ? payload.notes : "";
+		const savedBy = resolveSaverLabel(socket.id);
+		const entry = saveCurrentGameSnapshot(label, notes, savedBy);
+		emitAdminLog(`Saved game snapshot: ${entry.label} by ${entry.savedBy}`);
+		emitSaveListTo(socket);
+		emitState();
+	});
+
+	socket.on("load-game", (payload) => {
+		if (!isAdminSocket(socket)) return;
+		const saveId = String(payload?.saveId || "").trim();
+		if (!saveId) return;
+
+		const entry = loadGameSnapshotById(saveId);
+		if (!entry) {
+			socket.emit("admin-log", "Load failed: save not found");
+			emitSaveListTo(socket);
+			return;
+		}
+
+		adminSocketId = socket.id;
+		clearPhaseTimer();
+		emitAdminLog(`Loaded game snapshot: ${entry.label}`);
+		emitSaveListTo(socket);
+		emitState();
+	});
+
+	socket.on("delete-save", (payload) => {
+		if (!isAdminSocket(socket)) return;
+		const saveId = String(payload?.saveId || "").trim();
+		if (!saveId) return;
+
+		const ok = deleteGameSnapshotById(saveId);
+		if (ok) {
+			socket.emit("admin-log", "Saved snapshot deleted");
+		} else {
+			socket.emit("admin-log", "Delete failed: save not found");
+		}
+		emitSaveListTo(socket);
 	});
 
 	socket.on("admin-start", (rolesConfig) => {
@@ -1429,3 +1624,4 @@ http.listen(PORT, () => {
 		`请让大家连接同一 Wi-Fi，并在浏览器输入: http://${getLocalIP()}:${PORT}\n`,
 	);
 });
+

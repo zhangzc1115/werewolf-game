@@ -473,11 +473,19 @@ function initAdmin() {
 }
 
 function startGame() {
-	socket.emit("admin-start", buildRoleConfig("admin"));
+	const winCondition = document.getElementById("admin-win-condition")?.value;
+	socket.emit("admin-start", {
+		rolesConfig: buildRoleConfig("admin"),
+		winCondition,
+	});
 }
 
 function startSelfModeratedGame() {
-	socket.emit("player-start-self", buildRoleConfig("lobby"));
+	const winCondition = document.getElementById("lobby-win-condition")?.value;
+	socket.emit("player-start-self", {
+		rolesConfig: buildRoleConfig("lobby"),
+		winCondition,
+	});
 }
 
 function releaseAdmin() {
@@ -581,8 +589,9 @@ socket.on("update", (state) => {
 	const myRole = document.getElementById("my-role-display");
 	if (myRole) {
 		const exposed = me?.role === "idiot" && me?.isExposed ? "（已翻牌）" : "";
+		const winText = state.winCondition === "side-kill" ? "屠边" : "屠城";
 		myRole.innerText = me
-			? `我的身份: ${roleName(me.role)} ${exposed}`.trim()
+			? `我的身份: ${roleName(me.role)} ${exposed} | 胜利条件: ${winText}`.trim()
 			: "我的身份: 未知";
 	}
 

@@ -50,6 +50,7 @@ function createInitialState() {
 		gameStartedAt: null,
 		gameMode: "admin_moderated",
 		hostPlayerId: null,
+		winCondition: "side-kill", // side-kill, annihilation
 		players: [],
 		actions: {
 			hybridModels: {}, // { [hybridPlayerId]: modelPlayerId }
@@ -761,6 +762,7 @@ function getHybridTeam(player) {
 function computeLivingTeamCounts() {
 	let wolves = 0;
 	let villagers = 0;
+	let gods = 0;
 
 	for (const p of gameState.players) {
 		if (!p.alive) continue;
@@ -771,8 +773,13 @@ function computeLivingTeamCounts() {
 			continue;
 		}
 
-		if (isGoodBaseRole(p.role)) {
+		if (p.role === "villager") {
 			villagers += 1;
+			continue;
+		}
+
+		if (_isGodRole(p.role)) {
+			gods += 1;
 			continue;
 		}
 
@@ -781,27 +788,43 @@ function computeLivingTeamCounts() {
 			if (team === "wolves") {
 				wolves += 1;
 			} else {
-				villagers += 1;
+				// In side-kill, a good hybrid is often considered a "god" role for balance
+				gods += 1;
 			}
 		}
 	}
 
-	return { wolves, villagers };
+	return { wolves, villagers, gods };
 }
 
 function evaluateVictory() {
 	const counts = computeLivingTeamCounts();
+	const totalGood = counts.villagers + counts.gods;
 
-	if (counts.wolves === 0 && counts.villagers === 0) {
+	// Common draw condition
+	if (counts.wolves === 0 && totalGood === 0) {
 		return { team: "draw", reason: "No players alive", counts };
 	}
 
+	// Villagers win if all wolves are gone
 	if (counts.wolves === 0) {
 		return { team: "villagers", reason: "All wolves eliminated", counts };
 	}
 
-	if (counts.villagers === 0) {
-		return { team: "wolves", reason: "All good players eliminated", counts };
+	if (gameState.winCondition === "annihilation") {
+		// 屠城: Win when no good players left
+		if (totalGood === 0) {
+			return { team: "wolves", reason: "All good players eliminated", counts };
+		}
+		// Some versions of Annihilation also use parity:
+		if (counts.wolves >= totalGood) {
+			return { team: "wolves", reason: "Wolves reached parity", counts };
+		}
+	} else {
+		// 屠边 (Default): Win when all villagers dead OR all gods dead
+		if (counts.villagers === 0 || counts.gods === 0) {
+			return { team: "wolves", reason: "All villagers or gods eliminated", counts };
+		}
 	}
 
 	return null;
@@ -1109,6 +1132,7 @@ function startGameWithParticipants(
 	rolesConfig,
 	mode,
 	hostPlayerId,
+	winCondition,
 ) {
 	gameState.players.forEach((p) => {
 		p.role = "spectator";
@@ -1131,6 +1155,7 @@ function startGameWithParticipants(
 	gameState.gameStartedAt = Date.now();
 	gameState.winner = null;
 	gameState.gameMode = mode;
+	gameState.winCondition = winCondition || "side-kill";
 	gameState.hostPlayerId = mode === "self_moderated" ? hostPlayerId : null;
 	gameState.witchAbilities = { saveUsed: false, poisonUsed: false };
 	clearPublicNotice();
@@ -1304,8 +1329,11 @@ io.on("connection", (socket) => {
 		emitSaveListTo(socket);
 	});
 
-	socket.on("admin-start", (rolesConfig) => {
+	socket.on("admin-start", (payload) => {
 		if (!isAdminSocket(socket)) return;
+
+		const rolesConfig = payload?.rolesConfig || payload;
+		const winCondition = payload?.winCondition || "side-kill";
 
 		const participants = gameState.players.filter((p) => p.connected);
 		if (participants.length < 4) {
@@ -1318,14 +1346,18 @@ io.on("connection", (socket) => {
 			rolesConfig,
 			"admin_moderated",
 			null,
+			winCondition,
 		);
 		emitState();
 	});
 
-	socket.on("player-start-self", (rolesConfig) => {
+	socket.on("player-start-self", (payload) => {
 		const starter = getPlayerBySocketId(socket.id);
 		if (!starter || !starter.connected) return;
 		if (gameState.phase !== PHASES.WAITING) return;
+
+		const rolesConfig = payload?.rolesConfig || payload;
+		const winCondition = payload?.winCondition || "side-kill";
 
 		const participants = gameState.players.filter((p) => p.connected);
 		if (participants.length < 4) {
@@ -1340,6 +1372,7 @@ io.on("connection", (socket) => {
 			rolesConfig,
 			"self_moderated",
 			starter.id,
+			winCondition,
 		);
 		emitAdminLog(`Self-moderated game started by ${starter.name}`);
 		emitState();

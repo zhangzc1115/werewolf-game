@@ -34,6 +34,13 @@
                     <div class="role-item"><span>Idiot</span><input id="lobby-role-idiot" type="number" min="0" value="1"></div>
                     <div class="role-item"><span>Hybrid</span><input id="lobby-role-hybrid" type="number" min="0" value="1"></div>
                 </div>
+                <div class="role-item" style="max-width: 400px; margin: 10px auto;">
+                    <span>Win Condition</span>
+                    <select id="lobby-win-condition">
+                        <option value="side-kill">Side-kill (屠边)</option>
+                        <option value="annihilation">Annihilation (屠城)</option>
+                    </select>
+                </div>
             </div>
             <button onclick="startSelfModeratedGame()">Start Self-Moderated Game</button>
             <button onclick="initAdmin()">Switch to Admin</button>
@@ -75,6 +82,13 @@
                     <div class="role-item"><span>Hunter</span><input id="admin-role-hunter" type="number" min="0" value="1"></div>
                     <div class="role-item"><span>Idiot</span><input id="admin-role-idiot" type="number" min="0" value="1"></div>
                     <div class="role-item"><span>Hybrid</span><input id="admin-role-hybrid" type="number" min="0" value="1"></div>
+                </div>
+                <div class="role-item" style="max-width: 400px; margin: 10px auto;">
+                    <span>Win Condition</span>
+                    <select id="admin-win-condition">
+                        <option value="side-kill">Side-kill (屠边)</option>
+                        <option value="annihilation">Annihilation (屠城)</option>
+                    </select>
                 </div>
             </div>
             <div class="control-panel">
